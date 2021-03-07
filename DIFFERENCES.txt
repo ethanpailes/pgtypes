@@ -1,0 +1,30 @@
+
+Differences between lib/pq and jackc/pgx:
+    - jackc/pgx does not handle times from before the common erra
+    - jackc/pgx does parse psql 'time' values into golang time.Time values
+    - jackc/pgx handles 'infinity' and '-infinity' timestamps by just returning
+      a string "infinity" or "-infinity". I'm not sure if it supports something
+      like EnableInfinityTs from lib/pq. I should probably ask upstream for this
+      feature enhancement.
+    - jackc/pgx expects []byte parameters passed in as uuids to be 16 byte packed
+      uuids, while lib/pq allows them to be string encoded. I side with jackc/pgx
+      on this guy. []byte is for binary data.
+    - jackc/pgx does not allow you to convert binary byte slices to ints, because
+      why the heck would it? lib/pq does for some inexplicable reason.
+    - by default, lib/pq scans uuids into `[]byte`s, but not the packed 16 byte
+      encoding, the stringy encoding. By default jackc/pgx also uses the string
+      encoding, but it uses the right go type, `string`. Why lib/pq?
+    - jackc/pgx returns `timestamp with time zone` as a time.Time value in
+      the local time of *the go process*, while lib/pq returns it as a time.Time
+      value in the local time of *the postgres server*. The lib/pq way seems
+      to match what `psql` does a little better, and the jackc/pgx way seems a
+      little more reasonable in the context of a go driver. I don't think this
+      is worth talking about with the jackc/pgx maintainers.
+        - As a bit of an aside about `with time zone` types in postgres, they are
+          all horrible and should not be used. They are stored internally as UTC
+          and then just returned in whatever the local timezone is (however the
+          driver wants to determine that). Before, I thought they were actually
+          storing the time zone along with the time stamp which would actually
+          make sense in some situations, but they don't do that. It is purely a
+          formatting thing. Never use `with time zone` I guess.
+
